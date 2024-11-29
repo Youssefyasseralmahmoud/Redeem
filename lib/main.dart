@@ -1,125 +1,258 @@
 import 'package:flutter/material.dart';
+import 'package:nitro_flutter_project/app_storage.dart';
+import 'package:nitro_flutter_project/json_db/json_db.dart';
+import 'package:nitro_flutter_project/screens/main_screen/main_screen.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:redeem/app_storage.dart';
+import 'package:redeem/config.dart';
+import 'package:redeem/generated/l10n.dart';
+import 'package:redeem/json_db/enum.dart';
+import 'package:redeem/json_db/json_db.dart';
+import 'package:redeem/otp_phone_auth_handler/otp_phone_auth_handler.dart';
+import 'package:redeem/screens/List_coupons_page/List_coupons_page.dart';
+import 'package:redeem/screens/Order%20Details/order_details.dart';
+import 'package:redeem/screens/Profile/profile.dart';
+import 'package:redeem/screens/all%20offers/all_offers.dart';
+import 'package:redeem/screens/buy_points/buy_points.dart';
+import 'package:redeem/screens/cart_screen/cart_screen.dart';
+import 'package:redeem/screens/details_screen_of_providers/details_screen_of_providers.dart';
+import 'package:redeem/screens/main_screen/main_screen.dart';
+import 'package:redeem/screens/offer_details/offer_details.dart';
+import 'package:redeem/screens/otpverification/otp_verification.dart';
+import 'package:redeem/screens/providers/providers.dart';
+import 'package:redeem/screens/subscription_package/subscription_package.dart';
+import 'package:redeem/theme/colors.dart';
+import 'local/local.dart';
+import 'main_controller.dart';
+import 'screens/Seleted_City/Selected_city.dart';
+import 'screens/change_password/change_password.dart';
+import 'screens/details_coupon/details_coupon.dart';
+import 'screens/edit_personal_information/edit_personal_information.dart';
+import 'screens/forget_password/forget_password.dart';
+import 'screens/home_screen/home_screen.dart';
+import 'screens/login/login.dart';
+import 'screens/intro_app/intro_app.dart';
+import 'screens/selectlanguage/selectlanguage.dart';
+import 'screens/signup/signup.dart';
+import 'package:redeem/globals.dart' as globals;
+import 'package:flutter_localizations/flutter_localizations.dart';
 
-void main() {
-  runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  String? deviceLocale = null;
+  String? locale = await appStorage().getLang() ??
+      (deviceLocale != null ? deviceLocale : config_app.DefaultLang);
+
+  globals.SelectedLang = locale;
+
+  bool isLogin = await appStorage().checkIsLogin();
+  bool isFirtTime = await appStorage().checkIsFirstTime();
+  int? cityid = await appStorage().getcityId();
+
+  await JsonDb().getMainCategories().then((res) {
+    if (res.success) {
+      globals.categories = res.data;
+    }
+  });
+  await JsonDb().getCityCollections().then((res) {
+    if (res.success) {
+      globals.cities = res.data;
+    }
+  });
+
+  if (isLogin) {
+    globals.isLogin = isLogin;
+    globals.customer = await appStorage().getCustomer();
+    globals.userData = await appStorage().getUserData();
+    globals.userType = await appStorage().getUserType();
+    globals.token = await appStorage().getToken();
+    globals.userId = globals.userData!.id!;
+
+    await JsonDb().getWhichListIdCollections().then((res) {
+      if (res.success) {
+        globals.whichListCoupon = res.data.listcoupon;
+        globals.whichListOffers = res.data.listoffer;
+        globals.whichListProviders = res.data.listprovider;
+
+        ;
+      }
+    });
+
+    JsonDb().getIsActiveDataCollections().then((res) {
+      if (res.success) {
+        print("user is active ${res.success}");
+        globals.customer = res.data.customer;
+        globals.userType = res.data.userType!;
+        globals.userData = res.data.user;
+        globals.IsActive = true;
+
+        appStorage().setUserData(res.data.user);
+        appStorage().setUserType(res.data.userType!);
+        appStorage().setCustomer(res.data.customer);
+      } else {
+        globals.isLogin = false;
+        globals.IsActive = false;
+        globals.userData = null;
+        globals.userId = 0;
+        globals.token = "";
+        globals.userType = "";
+        globals.customer = null;
+        appStorage().setIsLogin(false);
+        appStorage().setUserID(null);
+        appStorage().setToken("");
+        appStorage().setUserData(null);
+        appStorage().setUserType("");
+        appStorage().setCustomer(null);
+
+        // Navigator.of(context)
+        //     .pushReplacement(MaterialPageRoute(builder: (context) {
+        //   return const SelectLanguage();
+        // }));
+      }
+    });
+  }
+
+  if (!isFirtTime) {
+    globals.isfirstTime = isFirtTime;
+  }
+  if (cityid != null) {
+    globals.cityId = cityid;
+  }
+  var lang = config_app.DefaultLang;
+  runApp(
+      RestartWidget(child: MyApp(locale, lang, isLogin, isFirtTime, cityid)));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// ignore: must_be_immutable
+class MyApp extends StatefulWidget {
+  String lang;
+  String locale;
+  bool? isLogin;
+  bool? isFirstTime;
+  int? cityid;
+  MyApp(this.locale, this.lang, this.isLogin, this.isFirstTime, this.cityid,
+      {super.key});
 
-  // This widget is the root of your application.
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
+  State<MyApp> createState() => _MyApp(
+      lang: this.lang,
+      isLogin: this.isLogin,
+      isfirstTime: this.isFirstTime,
+      cityid: this.cityid);
+  static void setLocale(BuildContext context, String lang) {
+    _MyApp? state = context.findAncestorStateOfType<_MyApp>();
+    state!.setLocale(lang);
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+class _MyApp extends State<MyApp> {
+  String lang = "";
+  Locale? locale;
+  bool? isLogin;
+  bool? isfirstTime;
+  int? cityid;
+  _MyApp(
+      {required this.lang,
+      this.locale,
+      this.isLogin,
+      this.isfirstTime,
+      this.cityid});
+  @override
+  void initState() {
+    super.initState();
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+    OneSignal.Debug.setLogLevel(OSLogLevel.debug);
+    OneSignal.initialize("43331a72-8ab0-410b-afb2-ed216dda0936");
+    OneSignal.Notifications.requestPermission(true);
+    if (globals.isLogin && globals.userId != "") {
+      OneSignal.login("${globals.userId}");
+      OneSignal.User.addTagWithKey("user_id", globals.userId);
+      OneSignal.Notifications.addClickListener((event) {
+        var data = event.notification.additionalData;
+        print("data is ${data!['type']}");
+        globals.navigatorKey.currentState?.pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ListCouponsPage(),
+          ),
+        );
+        // Navigator.of(context).push(MaterialPageRoute(builder: (context) {
+        //   return OfferDetails();
+        // }));
+      });
+    }
+  }
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  Widget build(BuildContext context) {
+    return OtpPhoneAuthProvider(
+      child: MaterialApp(
+        theme: ThemeData(
+            colorScheme:
+                ColorScheme.fromSeed(seedColor: CustomColors.primarycolor),
+            indicatorColor: CustomColors.DangerColor,
+            primaryColor: CustomColors.primarycolor,
+            fontFamily: globals.SelectedLang == "ar" ? "Tajawal" : "Roboto"),
+        navigatorKey: globals.navigatorKey,
+        localizationsDelegates: const [
+          S.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: S.delegate.supportedLocales,
+        locale: Locale(globals.SelectedLang),
+        //  translations: mylocal(),
+        debugShowCheckedModeBanner: false,
+        //
+        // home: SubsriptionPackage(),
+        home: isfirstTime == true
+            ? SelectLanguage()
+            : isLogin == true
+                ? MainScreen()
+                : Login(),
+        // defaultGlobalState: true
+      ),
+    );
+  }
+
+  setLocale(String lang) {
+    setState(() {
+      this.lang = lang;
+      if (this.lang == "en") {
+        this.locale = new Locale("en");
+      } else {
+        this.locale = new Locale(this.lang);
+      }
+
+      globals.SelectedLang = this.lang;
+    });
+  }
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class RestartWidget extends StatefulWidget {
+  RestartWidget({required this.child});
 
-  void _incrementCounter() {
+  final Widget child;
+
+  @override
+  _RestartWidgetState createState() => _RestartWidgetState();
+}
+
+class _RestartWidgetState extends State<RestartWidget> {
+  Key key = UniqueKey();
+
+  void restartApp() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      key = UniqueKey();
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    return KeyedSubtree(
+      key: key,
+      child: widget.child,
     );
   }
 }
